@@ -4,34 +4,33 @@ ITEM_TYPE_OF = {tab: 'TAB', history: 'HIS', bookmark: 'BKM', websearch: 'WEB', c
 SELECTOR_NUM = 20
 
 KEY_CODE =
-  START_HITAHINT: 69            # e
-  FOCUS_FORM: 70                # f
-  TOGGLE_SELECTOR: 186          # ;
-  CANCEL: 27                    # ESC
   MOVE_NEXT_SELECTOR_CURSOR: 40 # down
   MOVE_PREV_SELECTOR_CURSOR: 38 # up
-  MOVE_NEXT_FORM: 34            # pageup
-  MOVE_PREV_FORM: 33            # pagedown
-  BACK_HISTORY: 72              # h
 
 WEB_SEARCH_LIST =
   {title: 'google検索', url: 'https://www.google.co.jp/#hl=ja&q=', type: 'websearch'}
   {title: 'alc辞書', url: 'http://eow.alc.co.jp/search?ref=sa&q=', type: 'websearch'}
 
-tabSelect = (f, list) ->
+tabSelect =->
+  dfd = $.Deferred()
   chrome.tabs.query({currentWindow: true}, (tabs) ->
-    f(list.concat([{id: e.id, title: e.title, url: e.url, type: 'tab'} for e in tabs]))
+    dfd.resolve([{id: e.id, title: e.title, url: e.url, type: 'tab'} for e in tabs])
   )
+  dfd.promise()
 
-historySelect = (f, list) ->
+historySelect =->
+  dfd = $.Deferred()
   chrome.history.search({text:'', maxResults: 1000}, (hs) ->
-    f(list.concat([{id: e.id, title: e.title, url: e.url, type: 'history'} for e in hs]))
+    dfd.resolve([{id: e.id, title: e.title, url: e.url, type: 'history'} for e in hs])
   )
+  dfd.promise()
 
-bookmarkSelect = (f, list) ->
+bookmarkSelect =->
+  dfd = $.Deferred()
   chrome.bookmarks.search("h", (es) ->
-    f(list.concat([{id: e.id, title: e.title, url: e.url, type: 'bookmark'} for e in es when e.url?]))
+    dfd.resolve([{id: e.id, title: e.title, url: e.url, type: 'bookmark'} for e in es when e.url?])
   )
+  dfd.promise()
 
 # (tab|history|bookmark|,,,)のリストをうけとりそれをhtmlにしてappendする
 # makeSelectorConsole :: [{title, url, type}] -> IO Jquery
@@ -63,10 +62,6 @@ class Popup
 
 class SelectorMode
   @keyupMap = (e) ->
-#     switch e.keyCode
-#     case KEY_CODE.CANCEL          then @@keyUpCancel()
-#     case KEY_CODE.TOGGLE_SELECTOR then @@keyUpSelectorToggle()
-#     default @@keyUpSelectorFiltering(e)
     @@keyUpSelectorFiltering(e)
     e.preventDefault()
 
@@ -75,11 +70,6 @@ class SelectorMode
     case KEY_CODE.MOVE_NEXT_SELECTOR_CURSOR then @@keyDownSelectorCursorNext(e)
     case KEY_CODE.MOVE_PREV_SELECTOR_CURSOR then @@keyDownSelectorCursorPrev(e)
     default (-> alert(e.keyCode))
-
-#   @keyUpCancel =->
-#     Main.mode = NeutralMode
-#     $('#selectorConsole').hide()
-#     $(':focus').blur()
 
   @keyUpSelectorFiltering = (e) ->
     return false if e.keyCode < 65 or e.keyCode > 90
@@ -100,10 +90,6 @@ class SelectorMode
     makeSelectorConsole(filtering(text, Popup.list).concat(WEB_SEARCH_LIST))
     $('#selectorConsole').show()
 
-#   @keyUpSelectorToggle =->
-#     Main.mode = NeutralMode
-#     $('#selectorConsole').hide()
-
   @keyDownSelectorCursorNext = (e) ->
     console.log('keyDownSelectorCursorNext')
     $('#selectorList .selected').removeClass("selected").next("tr").addClass("selected")
@@ -119,12 +105,7 @@ class SelectorMode
     [type, id] = $('#selectorList tr.selected').attr('id').split('-')
     url = $('#selectorList tr.selected span.url').text()
     query = $('#selectorInput').val()
-#     @@keyUpCancel()
-#     alert('keyUpSelectorDecide')
     selectorAction({id: id, url: url, type: type, query: query})
-#     chrome.extension.sendMessage(
-#       {mes: "keyUpSelectorDecide", item:{id: id, url: url, type: type, query: query}},
-#       ((res) -> console.log(res)))
     $('#selectorInput').val('')
     false
 
@@ -134,11 +115,8 @@ $(->
   $(document).keydown((e) -> SelectorMode.keydownMap(e))
   $('body').on('submit', '#selectorForm', SelectorMode.keyUpSelectorDecide)
 
-  historySelect_ = (list) ->
-    Popup.list = list
-    historySelect(makeSelectorConsole, list)
-  bookmarkSelect_ = (list) ->
-    Popup.list = list
-    bookmarkSelect(historySelect_, list)
-  tabSelect(bookmarkSelect_, [])
+  $.when(tabSelect(), historySelect(), bookmarkSelect()).done((ts, hs, bs) ->
+    Popup.list = ts.concat(hs, bs)
+    makeSelectorConsole(Popup.list)
+  )
 )

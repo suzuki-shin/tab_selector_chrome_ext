@@ -9,15 +9,8 @@ ITEM_TYPE_OF = {
 };
 SELECTOR_NUM = 20;
 KEY_CODE = {
-  START_HITAHINT: 69,
-  FOCUS_FORM: 70,
-  TOGGLE_SELECTOR: 186,
-  CANCEL: 27,
   MOVE_NEXT_SELECTOR_CURSOR: 40,
-  MOVE_PREV_SELECTOR_CURSOR: 38,
-  MOVE_NEXT_FORM: 34,
-  MOVE_PREV_FORM: 33,
-  BACK_HISTORY: 72
+  MOVE_PREV_SELECTOR_CURSOR: 38
 };
 WEB_SEARCH_LIST = [
   {
@@ -30,12 +23,14 @@ WEB_SEARCH_LIST = [
     type: 'websearch'
   }
 ];
-tabSelect = function(f, list){
-  return chrome.tabs.query({
+tabSelect = function(){
+  var dfd;
+  dfd = $.Deferred();
+  chrome.tabs.query({
     currentWindow: true
   }, function(tabs){
     var e;
-    return f(list.concat((function(){
+    return dfd.resolve((function(){
       var i$, ref$, len$, results$ = [];
       for (i$ = 0, len$ = (ref$ = tabs).length; i$ < len$; ++i$) {
         e = ref$[i$];
@@ -47,16 +42,19 @@ tabSelect = function(f, list){
         });
       }
       return results$;
-    }())));
+    }()));
   });
+  return dfd.promise();
 };
-historySelect = function(f, list){
-  return chrome.history.search({
+historySelect = function(){
+  var dfd;
+  dfd = $.Deferred();
+  chrome.history.search({
     text: '',
     maxResults: 1000
   }, function(hs){
     var e;
-    return f(list.concat((function(){
+    return dfd.resolve((function(){
       var i$, ref$, len$, results$ = [];
       for (i$ = 0, len$ = (ref$ = hs).length; i$ < len$; ++i$) {
         e = ref$[i$];
@@ -68,13 +66,16 @@ historySelect = function(f, list){
         });
       }
       return results$;
-    }())));
+    }()));
   });
+  return dfd.promise();
 };
-bookmarkSelect = function(f, list){
-  return chrome.bookmarks.search("h", function(es){
+bookmarkSelect = function(){
+  var dfd;
+  dfd = $.Deferred();
+  chrome.bookmarks.search("h", function(es){
     var e;
-    return f(list.concat((function(){
+    return dfd.resolve((function(){
       var i$, ref$, len$, results$ = [];
       for (i$ = 0, len$ = (ref$ = es).length; i$ < len$; ++i$) {
         e = ref$[i$];
@@ -88,8 +89,9 @@ bookmarkSelect = function(f, list){
         }
       }
       return results$;
-    }())));
+    }()));
   });
+  return dfd.promise();
 };
 makeSelectorConsole = function(list){
   var ts, t;
@@ -209,7 +211,6 @@ SelectorMode = (function(){
   return SelectorMode;
 }());
 $(function(){
-  var historySelect_, bookmarkSelect_;
   $(document).keyup(function(e){
     return SelectorMode.keyupMap(e);
   });
@@ -217,13 +218,8 @@ $(function(){
     return SelectorMode.keydownMap(e);
   });
   $('body').on('submit', '#selectorForm', SelectorMode.keyUpSelectorDecide);
-  historySelect_ = function(list){
-    Popup.list = list;
-    return historySelect(makeSelectorConsole, list);
-  };
-  bookmarkSelect_ = function(list){
-    Popup.list = list;
-    return bookmarkSelect(historySelect_, list);
-  };
-  return tabSelect(bookmarkSelect_, []);
+  return $.when(tabSelect(), historySelect(), bookmarkSelect()).done(function(ts, hs, bs){
+    Popup.list = ts.concat(hs, bs);
+    return makeSelectorConsole(Popup.list);
+  });
 });
