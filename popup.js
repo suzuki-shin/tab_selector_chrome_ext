@@ -192,9 +192,9 @@ SelectorMode = (function(){
     $('#selectorList .selected').removeClass("selected").prev("tr").addClass("selected");
     return e.preventDefault();
   };
-  SelectorMode.keyUpSelectorDecide = function(){
+  SelectorMode.doAction = function(){
     var ref$, type, id, url, query;
-    console.log('keyUpSelectorDecide');
+    console.log('doAction');
     ref$ = $('#selectorList tr.selected').attr('id').split('-'), type = ref$[0], id = ref$[1];
     url = $('#selectorList tr.selected span.url').text();
     query = $('#selectorInput').val();
@@ -217,7 +217,7 @@ $(function(){
   $(document).keydown(function(e){
     return SelectorMode.keydownMap(e);
   });
-  $('body').on('submit', '#selectorForm', SelectorMode.keyUpSelectorDecide);
+  $('body').on('submit', '#selectorForm', SelectorMode.doAction);
   return $.when(tabSelect(), historySelect(), bookmarkSelect()).done(function(ts, hs, bs){
     Popup.list = ts.concat(hs, bs);
     return makeSelectorConsole(Popup.list);

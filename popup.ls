@@ -100,8 +100,8 @@ class SelectorMode
     $('#selectorList .selected').removeClass("selected").prev("tr").addClass("selected")
     e.preventDefault()
 
-  @keyUpSelectorDecide =->
-    console.log('keyUpSelectorDecide')
+  @doAction =->
+    console.log('doAction')
     [type, id] = $('#selectorList tr.selected').attr('id').split('-')
     url = $('#selectorList tr.selected span.url').text()
     query = $('#selectorInput').val()
@@ -113,9 +113,13 @@ class SelectorMode
 $(->
   $(document).keyup((e) -> SelectorMode.keyupMap(e))
   $(document).keydown((e) -> SelectorMode.keydownMap(e))
-  $('body').on('submit', '#selectorForm', SelectorMode.keyUpSelectorDecide)
+  $('body').on('submit', '#selectorForm', SelectorMode.doAction)
 
-  $.when(tabSelect(), historySelect(), bookmarkSelect()).done((ts, hs, bs) ->
+  $.when(
+    tabSelect(),
+    historySelect(),
+    bookmarkSelect()
+  ).done((ts, hs, bs) ->
     Popup.list = ts.concat(hs, bs)
     makeSelectorConsole(Popup.list)
   )
