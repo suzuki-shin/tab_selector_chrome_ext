@@ -1,7 +1,7 @@
 {
     "name": "TabLet",
     "description" : "tab switcher",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "browser_action": {
         "default_icon": "skull.gif",
         "default_title": "Selector",
